@@ -1,44 +1,46 @@
-Inverter 3 veje SWITCH
+Inverter - 3 phases SWITCH
 
 .include yosys/prim_cells_ngspice.mod
 .include PWM2.mod
 .include ad12.mod
 
-* Parametri
+* Parameters
 .param Vdc=12
 
-* Krmilnik
+* ADC buffer, ADC and PWM clock generation
 Vrst rst 0 DC(0) PULSE(0 5 0.5us 10ns 10ns 2us)
 Aabridge [rst] [drst] adc_buff
 .model adc_buff adc_bridge(in_low = 1 in_high = 1)
 
+* AD clock - also defines the number of conversions
 Aadclk 0 adclk ad_clk_m
-.model ad_clk_m d_osc(cntl_array=[0 1] freq_array=[512e3 512e3])
+.model ad_clk_m d_osc(cntl_array=[0 1] freq_array=[1e6 1e6])
 Apwmclk 0 pwmclk pwm_clk_m
 .model pwm_clk_m d_osc(cntl_array=[0 1] freq_array=[40e6 40e6])
 
-Vref ref 0 DC(1.024)
+* Reference voltage for ADC
+Vref ref 0 DC(1)
+* ADC voltage source
 Vcc vddio 0 DC(15)
 
-* Napajalna napetost
 V1 vdc v0 DC {Vdc}
 C1 vdc vsh 3300u
 R2 v0 vsh 1m
 
-* Breme
+* Load
 Rs1 L1 P001 10m
 Rs2 L2 P002 10m
 Rs3 L3 P003 10m
-Ls1 P001 out 500u
+Ls1 P001 out 500us
 Ls2 P002 out 500u
 Ls3 P003 out 500u
 
 * Shunt
 R1 0 vsh 1m	
-Bsense uin 0 V=v(vsh, 0) * 100
+Bsense uin 0 V=v(vsh, 0) * 100 + 0.5
 Xad uin ref vddio adclk d11 d10 d9 d8 d7 d6 d5 d4 d3 d2 d1 d0 ad12
 
-* Povezava z Firmware-om v C
+* ADC Firmware connection to C program
 .model firmware d_process(process_file="firmware/main" process_params=["Kp=10", "Ki=2"])
 Acontrol [d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 d10 d11] 
 + adclk drst [w0d w1d w2d w3d w4d w5d w6d w7d w8d w9d w10d w11d w12d w13d w14d w15d
@@ -92,8 +94,7 @@ D1 vn vp DMOD
 .model DMOD D (bv=50 is=1e-13 n=1.05)
 .ends sw_mosfet
 
-* Stikalna logika
-
+* Switches representing transistor circuits
 X1 v1p L1 vdc L1 sw_mosfet
 X2 v2p 0 L1 0 sw_mosfet
 X3 v3p L2 vdc L2 sw_mosfet
@@ -103,9 +104,9 @@ X6 v6p 0 L3 0 sw_mosfet
 
 
 
-* Simulacija in graf
+* Simulation and plot
 .control
-tran 10n 500u uic
+tran 10n 100u uic
 plot v(L1) v(L2) v(L3)
 plot i(Ls1) i(Ls2) i(Ls3)
 .endc
