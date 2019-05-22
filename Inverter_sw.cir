@@ -1,0 +1,113 @@
+Inverter 3 veje SWITCH
+
+.include yosys/prim_cells_ngspice.mod
+.include PWM2.mod
+.include ad12.mod
+
+* Parametri
+.param Vdc=12
+
+* Krmilnik
+Vrst rst 0 DC(0) PULSE(0 5 0.5us 10ns 10ns 2us)
+Aabridge [rst] [drst] adc_buff
+.model adc_buff adc_bridge(in_low = 1 in_high = 1)
+
+Aadclk 0 adclk ad_clk_m
+.model ad_clk_m d_osc(cntl_array=[0 1] freq_array=[512e3 512e3])
+Apwmclk 0 pwmclk pwm_clk_m
+.model pwm_clk_m d_osc(cntl_array=[0 1] freq_array=[40e6 40e6])
+
+Vref ref 0 DC(1.024)
+Vcc vddio 0 DC(15)
+
+* Napajalna napetost
+V1 vdc v0 DC {Vdc}
+C1 vdc vsh 3300u
+R2 v0 vsh 1m
+
+* Breme
+Rs1 L1 P001 10m
+Rs2 L2 P002 10m
+Rs3 L3 P003 10m
+Ls1 P001 out 500u
+Ls2 P002 out 500u
+Ls3 P003 out 500u
+
+* Shunt
+R1 0 vsh 1m	
+Bsense uin 0 V=v(vsh, 0) * 100
+Xad uin ref vddio adclk d11 d10 d9 d8 d7 d6 d5 d4 d3 d2 d1 d0 ad12
+
+* Povezava z Firmware-om v C
+.model firmware d_process(process_file="firmware/main" process_params=["Kp=10", "Ki=2"])
+Acontrol [d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 d10 d11] 
++ adclk drst [w0d w1d w2d w3d w4d w5d w6d w7d w8d w9d w10d w11d w12d w13d w14d w15d
++ w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w110 w111 w112 w113 w114 w115
++ w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w210 w211 w212 w213 w214 w215
++ w30 w31 w32 w33 w34 w35 w36 w37 w38 w39 w310 w311 w312 w313 w314 w315
++ w40 w41 w42 w43 w44 w45 w46 w47 w48 w49 w410 w411 w412 w413 w414 w415
++ w50 w51 w52 w53 w54 w55 w56 w57 w58 w59 w510 w511 w512 w513 w514 w515
++ w60 w61 w62 w63 w64 w65 w66 w67 w68 w69 w610 w611 w612 w613 w614 w615] firmware
+
+* PWM Output
+Xpwmx pwmclk drst w0d w1d w2d w3d w4d w5d w6d w7d w8d w9d w10d w11d w12d w13d w14d w15d
++ co0 co1 co2 co3 co4 co5 co6 co7 co8 co9 co10 co11 co12 co13 co14 co15
++ w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w110 w111 w112 w113 w114 w115
++ w20 w21 w22 w23 w24 w25 w26 w27 w28 w29 w210 w211 w212 w213 w214 w215
++ w30 w31 w32 w33 w34 w35 w36 w37 w38 w39 w310 w311 w312 w313 w314 w315
++ w40 w41 w42 w43 w44 w45 w46 w47 w48 w49 w410 w411 w412 w413 w414 w415
++ w50 w51 w52 w53 w54 w55 w56 w57 w58 w59 w510 w511 w512 w513 w514 w515
++ w60 w61 w62 w63 w64 w65 w66 w67 w68 w69 w610 w611 w612 w613 w614 w615 
++ null null null c1 c2 c3 c4 c5 c6 PWM2
+
+.model dac_buff1 dac_bridge
+Adbridge1 [c1] [pwma1] dac_buff1
+Bpwmo1 v1p L1 V=v(pwma1)*v(vddio)
+
+.model dac_buff2 dac_bridge
+Adbridge2 [c2] [pwma2] dac_buff2
+Bpwmo2 v2p 0 V=v(pwma2)*v(vddio)
+
+.model dac_buff3 dac_bridge
+Adbridge3 [c3] [pwma3] dac_buff3
+Bpwmo3 v3p L2 V=v(pwma3)*v(vddio)
+
+.model dac_buff4 dac_bridge
+Adbridge4 [c4] [pwma4] dac_buff4
+Bpwmo4 v4p 0 V=v(pwma4)*v(vddio)
+
+.model dac_buff5 dac_bridge
+Adbridge5 [c5] [pwma5] dac_buff5
+Bpwmo5 v5p L3 V=v(pwma5)*v(vddio)
+
+.model dac_buff6 dac_bridge
+Adbridge6 [c6] [pwma6] dac_buff6
+Bpwmo6 v6p 0 V=v(pwma6)*v(vddio)
+
+.subckt sw_mosfet inp inn vp vn
+S1 vp vn inp inn SW_ON
+D1 vn vp DMOD
+.param sw_hyst=-0.1 Lsw=0
+.model SW_ON SW Ron=1m  Roff=1meg Vt=3 Vh=sw_hyst
+.model DMOD D (bv=50 is=1e-13 n=1.05)
+.ends sw_mosfet
+
+* Stikalna logika
+
+X1 v1p L1 vdc L1 sw_mosfet
+X2 v2p 0 L1 0 sw_mosfet
+X3 v3p L2 vdc L2 sw_mosfet
+X4 v4p 0 L2 0 sw_mosfet
+X5 v5p L3 vdc L3 sw_mosfet
+X6 v6p 0 L3 0 sw_mosfet
+
+
+
+* Simulacija in graf
+.control
+tran 10n 500u uic
+plot v(L1) v(L2) v(L3)
+plot i(Ls1) i(Ls2) i(Ls3)
+.endc
+
+.end
