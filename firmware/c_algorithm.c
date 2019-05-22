@@ -23,8 +23,10 @@ void convert_u16_u8(uint16_t inp, uint8_t *out1, uint8_t *out2)
 uint16_t c_algorithm(uint16_t input, uint8_t output[D_PROCESS_DLEN(DIGITAL_OUT)])
 {
 	uint16_t dt=40;		// Dead-time 
-	uint16_t c1,c2,c3,c4,c5,c6;
+	uint16_t c1,c2,c3,c4,c5,c6; // Initialize compare variables
+	static uint16_t counter = 0;
 	
+	// Set compare values
 	c1=400;
 	c2=800;
 	c3=1200;
@@ -33,6 +35,11 @@ uint16_t c_algorithm(uint16_t input, uint8_t output[D_PROCESS_DLEN(DIGITAL_OUT)]
 	c5=1800;
 	c6=2200;
 	
+	float amp = (((((input-2048.)/2048.)*0.5)/100.)/0.001);
+	
+	fprintf(stderr, "Counter = %u, AD = %u, I = %f\n", counter++, input, amp);
+	
+	// Convert values from 16-bit numbers to 8-bit numbers
 	convert_u16_u8(dt,&output[0],&output[1]);
 	convert_u16_u8(c1,&output[2],&output[3]);
 	convert_u16_u8(c2,&output[4],&output[5]);
@@ -40,6 +47,7 @@ uint16_t c_algorithm(uint16_t input, uint8_t output[D_PROCESS_DLEN(DIGITAL_OUT)]
 	convert_u16_u8(c4,&output[8],&output[9]);
 	convert_u16_u8(c5,&output[10],&output[11]);
 	convert_u16_u8(c6,&output[12],&output[13]);
+	
 	
     return 0;
 }

@@ -37,7 +37,6 @@ int main(int argc, char *argv[]) {
         }
         if (strcmp(argv[i],"ki")==0 && i+1 < argc) {
             Ki = strtod(argv[++i], NULL);
-        }
         else if (strcmp(argv[i],"--pipe")==0) {
             if ((pipein = open("motorforce_ngut_in",  O_RDONLY)) < 0 || (pipeout = open("motorforce_ngut_out",  O_WRONLY)) < 0) {
                 fprintf(stderr, "Cannot open motorforce_ngut_in and/or motorforce_ngut_out named pipes\n");
@@ -45,7 +44,8 @@ int main(int argc, char *argv[]) {
             }
         }
     }
-    fprintf(stderr, "%s(Kp=%i, Ki=%i)\n", argv[0], Kp, Ki);
+	
+    //fprintf(stderr, "%s(Kp=%i, Ki=%i)\n", argv[0], Kp, Ki);
     
     /*
      * Connect to a ngspice d_process and wait for stimulus in a loop.
